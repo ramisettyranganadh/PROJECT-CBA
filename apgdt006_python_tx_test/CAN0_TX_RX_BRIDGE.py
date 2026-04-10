@@ -9,9 +9,9 @@ def _device_callback(data):
     if data.command == mba.CAN_MSG_RX:
         data_str = " ".join(f"{b:02X}" for b in data.msg.data[:data.msg.dlc])
         print(
-            f"RX | BusID: {hex(data.msg.busId)}"
+            f"RX | BusID: 0x{data.msg.busId:X}"
             f" | Flags: {flags_to_text(data.msg.flags)}"
-            f" | ID: {hex(data.msg.id)}"
+            f" | ID=0x{data.msg.id:X}"
             f" | Length: {data.msg.dlc}"
             f" | Data: {data_str}"
         )
@@ -37,7 +37,7 @@ device.can_set_mode(mba.CAN0, mba.CAN_MODE_CLASSIC, mba.CAN_TESTMODE_NORMAL, Fal
 
 print("Bridge active: type CAN messages to send (Ctrl+C to quit).")
 print("Format: <ID> <byte1 byte2 ...> (hex values, space separated)")
-print("Example: 1FEED004 11 22 33 44 55 66 77 88")
+print("Example: 1FEED004 CA FE BA BE BA AD F0 0D")
 
 try:
     while True:
@@ -50,7 +50,7 @@ try:
             can_id = int(parts[0], 16)  # first token is ID in hex
             payload = [int(b, 16) for b in parts[1:]]
             dlc = len(payload)
-
+            
             rc = device.can_send_frame(
                 mba.CAN0,
                 can_id,
@@ -59,9 +59,10 @@ try:
                 mba.CANFRAME_FLAG_EXTENDED,  # Extended ID
                 1000
             )
-
+            
             if rc == 0:
-                print(f"TX initiated: ID={hex(can_id)} Data={payload}")
+                hex_payload = " ".join(f"{b:02X}" for b in payload)
+                print(f"TX initiated: ID=0x{can_id:X} Data={hex_payload}")
         except Exception as e:
             print(f"Invalid input: {e}")
 
