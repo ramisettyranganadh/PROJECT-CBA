@@ -5,7 +5,7 @@ def flags_to_text(flags: int) -> str:
     return "XTD" if flags & mba.CANFRAME_FLAG_EXTENDED else "-"
 
 def _device_callback(data):
-    # RX from CAN0 → forward to USB (print to host)
+    # Handle RX from CAN0
     if data.command == mba.CAN_MSG_RX:
         data_str = " ".join(f"{b:02X}" for b in data.msg.data[:data.msg.dlc])
         print(
@@ -15,18 +15,7 @@ def _device_callback(data):
             f" | Length: {data.msg.dlc}"
             f" | Data: {data_str}"
         )
-        # Example: forward CAN0 RX back to USB (host sees it)
-        # In practice, "USB" here means the Python host prints/logs it.
-        # If you want to echo back onto CAN0, you can re‑send:
-        device.can_send_frame(
-            mba.CAN0,
-            data.msg.id,
-            list(data.msg.data[:data.msg.dlc]),
-            data.msg.dlc,
-            data.msg.flags,
-            1000
-        )
-
+        # Forward received CAN0 frame back to USB (host prints it)
     elif data.command == mba.CAN_MSG_TX:
         print("TX complete")
 
@@ -46,28 +35,36 @@ device.register_callback(_device_callback, None)
 device.can_set_speed(mba.CAN0, 250, 250)
 device.can_set_mode(mba.CAN0, mba.CAN_MODE_CLASSIC, mba.CAN_TESTMODE_NORMAL, False)
 
-# --- Initial transmit from Host to EV31E34A ---
-tx_id      = 0x1FEED004
-tx_dlc     = 8
-tx_payload = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88]
+print("Bridge active: type CAN messages to send (Ctrl+C to quit).")
+print("Format: <ID> <byte1 byte2 ...> (hex values, space separated)")
+print("Example: 1FEED004 11 22 33 44 55 66 77 88")
 
-rc = device.can_send_frame(
-    mba.CAN0,
-    tx_id,
-    tx_payload,
-    tx_dlc,
-    mba.CANFRAME_FLAG_EXTENDED,  # Extended ID
-    1000
-)
-
-if rc == 0:
-    print(f"Transmission initiated: ID={hex(tx_id)}")
-
-# --- Infinite loop waiting for messages ---
-print("Bridge active: forwarding CAN0 <-> USB (Ctrl+C to stop)")
 try:
     while True:
-        time.sleep(0.1)  # keep process alive, callback handles RX/TX
+        user_input = input("Enter CAN frame: ").strip()
+        if not user_input:
+            continue
+
+        parts = user_input.split()
+        try:
+            can_id = int(parts[0], 16)  # first token is ID in hex
+            payload = [int(b, 16) for b in parts[1:]]
+            dlc = len(payload)
+
+            rc = device.can_send_frame(
+                mba.CAN0,
+                can_id,
+                payload,
+                dlc,
+                mba.CANFRAME_FLAG_EXTENDED,  # Extended ID
+                1000
+            )
+
+            if rc == 0:
+                print(f"TX initiated: ID={hex(can_id)} Data={payload}")
+        except Exception as e:
+            print(f"Invalid input: {e}")
+
 except KeyboardInterrupt:
     print("Stopping bridge...")
 
