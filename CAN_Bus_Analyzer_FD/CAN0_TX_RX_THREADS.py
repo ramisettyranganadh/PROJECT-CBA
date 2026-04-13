@@ -34,12 +34,12 @@ rx_start_time = 0.0
 # ---- ANSI COLORS ----
 COLOR_RESET = "\033[0m"
 
-COLOR_TX_MODE = "\033[38;5;136m"     # Dark Gold (TX state)
-COLOR_RX_MODE = "\033[36m"           # Cyan      (RX state)
-COLOR_TX_FRAME = "\033[33m"          # Dark Yellow (TX)
-COLOR_RX_FRAME = "\033[38;5;110m"    # Steel Blue  (RX)
+COLOR_TX_MODE = "\033[33m"           # Dark Yellow  (TX state)
+COLOR_RX_MODE = "\033[36m"           # Light Blue   (RX state)
+COLOR_TX_FRAME = "\033[93m"          # Light Yellow (TX)
+COLOR_RX_FRAME = "\033[38;5;110m"    # Steel Blue   (RX)
 
-COLOR_INPUT = "\033[92m"     # Green
+COLOR_WAIT  = "\033[92m"     # Green
 COLOR_ERROR = "\033[91m"     # Red
 
 # ---- Helpers ----
@@ -104,7 +104,7 @@ def tx_thread(device, stop_event):
                     f"| Data={payload_str}{COLOR_RESET}"
                 )
                 print(f"\n{COLOR_RX_MODE}--- RX MODE ---{COLOR_RESET}", flush=True)
-                print(f"{COLOR_RX_MODE}RX>{COLOR_RESET} ", flush=True)
+                print(f"{COLOR_WAIT}RX>{COLOR_RESET} ", flush=True)
 
         except queue.Empty:
             pass
@@ -128,7 +128,7 @@ def keyboard_thread(stop_event):
                 with print_lock:
                     print(f"\n{COLOR_TX_MODE}--- TX MODE ---{COLOR_RESET}", flush=True)
                     print("\nEnter Tx Frame:- <ID> <8 Bytes> Example:- 1FEED004 CA FE BA BE BA AD F0 0D")
-                    print(f"{COLOR_INPUT}TX>{COLOR_RESET} ", end="", flush=True)
+                    print(f"{COLOR_WAIT}TX>{COLOR_RESET} ", end="", flush=True)
                 
                 line = input().strip()
                 
@@ -137,7 +137,7 @@ def keyboard_thread(stop_event):
                     current_mode = MODE_RX
                     with print_lock:
                         print(f"\n{COLOR_RX_MODE}--- RX MODE ---{COLOR_RESET}", flush=True)
-                        print(f"{COLOR_RX_MODE}RX>{COLOR_RESET} ", flush=True)
+                        print(f"{COLOR_WAIT}RX>{COLOR_RESET} ", flush=True)
                     continue
                 
                 # ---- TX FRAME PROVIDED ----
@@ -196,7 +196,7 @@ def main():
     
     with print_lock:
         print(f"{COLOR_RX_MODE}--- RX MODE ---{COLOR_RESET}", flush=True)
-        print(f"{COLOR_RX_MODE}RX>{COLOR_RESET} ", flush=True)
+        print(f"{COLOR_WAIT}RX>{COLOR_RESET} ", flush=True)
     
     # Enable RX only AFTER everything is ready
     global rx_enabled, rx_start_time
