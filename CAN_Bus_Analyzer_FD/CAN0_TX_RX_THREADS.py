@@ -24,6 +24,10 @@ MODE_RX = 0
 MODE_TX = 1
 current_mode = MODE_RX
 
+RX_WARMUP_SEC = 0.5
+rx_enabled = False
+rx_start_time = 0.0
+
 # ---- ANSI COLORS ----
 COLOR_RESET = "\033[0m"
 
@@ -41,6 +45,10 @@ def flags_to_text(flags):
 
 # ---- RX CALLBACK (FAST, NEVER BLOCKS) ----
 def device_callback(data):
+    if not rx_enabled:
+        return
+    if time.time() - rx_start_time < RX_WARMUP_SEC:
+        return  # Ignore initial burst
     if data.command == mba.CAN_MSG_RX:
         rx_queue.put(data.msg)
 
@@ -57,13 +65,13 @@ def rx_thread(stop_event):
                     f"{b:02X}" for b in msg.data[:msg.dlc]
                 )
                 with print_lock:
+                    ts = time.strftime("%H:%M:%S")
                     print(
-                        f"\n{COLOR_RX_FRAME}RX | {flags_to_text(msg.flags)} "
+                        f"\n{COLOR_RX_FRAME}[{ts}] RX | {flags_to_text(msg.flags)} "
                         f"| ID=0x{msg.id:X} "
                         f"| DLC={msg.dlc} "
                         f"| Data={payload}{COLOR_RESET}"
                     )
-
         except queue.Empty:
             pass
 
@@ -85,8 +93,9 @@ def tx_thread(device, stop_event):
             payload_str = " ".join(f"{b:02X}" for b in payload_bytes)
 
             with print_lock:
+                ts = time.strftime("%H:%M:%S")
                 print(
-                    f"\n{COLOR_TX_FRAME}TX | {flags_to_text(mba.CANFRAME_FLAG_EXTENDED)} "
+                    f"\n{COLOR_TX_FRAME}[{ts}] TX | {flags_to_text(mba.CANFRAME_FLAG_EXTENDED)} "
                     f"| ID=0x{can_id:X} "
                     f"| DLC={len(payload_bytes)} "
                     f"| Data={payload_str}{COLOR_RESET}"
@@ -101,7 +110,7 @@ def keyboard_thread(stop_event):
     global current_mode
 
     with print_lock:
-        print("\nCAN Monitor is in RX MODE. Press 'T' to TX MODE or 'Q' to QUIT.\n")
+        print("\nCAN Monitor is now in RX MODE. Press 'T' to Enter TX MODE or 'Q' to QUIT.\n")
 
     while not stop_event.is_set():
         if msvcrt.kbhit():
@@ -150,9 +159,9 @@ def main():
         mba.CAN0,
         mba.CAN_MODE_CLASSIC,
         mba.CAN_TESTMODE_NORMAL,
-        False
+        True
     )
-
+    
     stop_event = threading.Event()
 
     threads = [
@@ -160,11 +169,25 @@ def main():
         threading.Thread(target=tx_thread, args=(device, stop_event), daemon=True),
         threading.Thread(target=keyboard_thread, args=(stop_event,), daemon=True),
     ]
-
+    
+    # ---- FLUSH RX QUEUE ----
+    while not rx_queue.empty():
+        try:
+            rx_queue.get_nowait()
+        except queue.Empty:
+            break
+    
+    # Start threads
     for t in threads:
         t.start()
     
-    print(f"{COLOR_RX_MODE}--- RX MODE ---{COLOR_RESET}", flush=True)
+    with print_lock:
+        print(f"{COLOR_RX_MODE}--- RX MODE ---{COLOR_RESET}", flush=True)
+    
+    # Enable RX only AFTER everything is ready
+    global rx_enabled, rx_start_time
+    rx_start_time = time.time()
+    rx_enabled = True
 
     try:
         while not stop_event.is_set():
