@@ -11,6 +11,9 @@ import threading
 import msvcrt
 import mba
 
+def clear_screen():
+    os.system('cls')
+
 # ---- DLL LOAD FIX ----
 dll_dir = os.path.dirname(os.path.abspath(__file__))
 os.add_dll_directory(dll_dir)
@@ -111,6 +114,7 @@ def keyboard_thread(stop_event):
     global current_mode
 
     with print_lock:
+        clear_screen()
         print("\nCANFD Monitor is now in RX MODE. Press 'T' to Enter TX MODE or 'Q' to QUIT\n")
 
     while not stop_event.is_set():
