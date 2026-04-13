@@ -101,7 +101,7 @@ def keyboard_thread(stop_event):
     global current_mode
 
     with print_lock:
-        print("\nCAN Monitor is Running in RX MODE. Press 'T' to Enter TX MODE | 'Q' to QUIT\n")
+        print("\nCAN Monitor is in RX MODE. Press 'T' to TX MODE or 'Q' to QUIT.\n")
 
     while not stop_event.is_set():
         if msvcrt.kbhit():
