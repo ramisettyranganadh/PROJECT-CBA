@@ -1,3 +1,9 @@
+#Instructions to use this Scripts:
+#After following CAN_Bus_Analyzer_FD_Setup
+#run python CAN0_TX_RX_THREADS.py
+#receive messages
+#press T to pause Receiving and send a CAN message.
+
 import os
 import time
 import queue
