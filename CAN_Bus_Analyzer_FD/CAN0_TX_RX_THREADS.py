@@ -101,6 +101,7 @@ def tx_thread(device, stop_event):
                     f"| Data={payload_str}{COLOR_RESET}"
                 )
                 print(f"\n{COLOR_RX_MODE}--- RX MODE ---{COLOR_RESET}", flush=True)
+                print(f"{COLOR_RX_MODE}RX>{COLOR_RESET} ", flush=True)
 
         except queue.Empty:
             pass
@@ -110,7 +111,7 @@ def keyboard_thread(stop_event):
     global current_mode
 
     with print_lock:
-        print("\nCAN Monitor is now in RX MODE. Press 'T' to Enter TX MODE or 'Q' to QUIT.\n")
+        print("\nCANFD Monitor is now in RX MODE. Press 'T' to Enter TX MODE or 'Q' to QUIT\n")
 
     while not stop_event.is_set():
         if msvcrt.kbhit():
@@ -122,23 +123,31 @@ def keyboard_thread(stop_event):
 
                 with print_lock:
                     print(f"\n{COLOR_TX_MODE}--- TX MODE ---{COLOR_RESET}", flush=True)
-                    print("\nEnter Frame: <ID> <Bytes> Ex:- 1FEED004 CA FE BA BE BA AD F0 0D")
+                    print("\nEnter Tx Frame:- <ID> <8 Bytes> Example:- 1FEED004 CA FE BA BE BA AD F0 0D")
                     print(f"{COLOR_INPUT}TX>{COLOR_RESET} ", end="", flush=True)
-
+                
                 line = input().strip()
-
-                if line:
-                    try:
-                        parts = line.split()
-                        can_id = int(parts[0], 16)
-                        payload = [int(b, 16) for b in parts[1:]]
-                        tx_queue.put((can_id, payload))
-                    except ValueError:
-                        with print_lock:
-                            print("Invalid TX format")
-
+                
+                # ---- EMPTY ENTER: JUST RETURN TO RX MODE ----
+                if not line:
+                    current_mode = MODE_RX
+                    with print_lock:
+                        print(f"\n{COLOR_RX_MODE}--- RX MODE ---{COLOR_RESET}", flush=True)
+                        print(f"{COLOR_RX_MODE}RX>{COLOR_RESET} ", flush=True)
+                    continue
+                
+                # ---- TX FRAME PROVIDED ----
+                try:
+                    parts = line.split()
+                    can_id = int(parts[0], 16)
+                    payload = [int(b, 16) for b in parts[1:]]
+                    tx_queue.put((can_id, payload))
+                except ValueError:
+                    with print_lock:
+                        print(f"{COLOR_ERROR}Invalid TX format{COLOR_RESET}")
+                
                 current_mode = MODE_RX
-
+            
             elif key == 'q':
                 stop_event.set()
 
@@ -183,6 +192,7 @@ def main():
     
     with print_lock:
         print(f"{COLOR_RX_MODE}--- RX MODE ---{COLOR_RESET}", flush=True)
+        print(f"{COLOR_RX_MODE}RX>{COLOR_RESET} ", flush=True)
     
     # Enable RX only AFTER everything is ready
     global rx_enabled, rx_start_time
