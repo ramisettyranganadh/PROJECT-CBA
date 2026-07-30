@@ -127,7 +127,9 @@ def keyboard_thread(stop_event):
 
                 with print_lock:
                     print(f"\n{COLOR_TX_MODE}--- TX MODE ---{COLOR_RESET}", flush=True)
-                    print("\nEnter Tx Frame:- <ID> <8 Bytes> Example:- 1FEED004 CA FE BA BE BA AD F0 0D")
+                    print("\nEnter Tx Frame:- <ID> <8 Bytes> Example:- 1FEED004 01 00 00 0F 00 00 00 00")
+                    print("\nEnter Tx Frame:- <ID> <8 Bytes> Example:- 1FEED004 02 03 00 0F 00 00 00 00")
+                    print("\nEnter Tx Frame:- <ID> <8 Bytes> Example:- 1FEED004 03 30 00 0F 00 00 00 00")
                     print(f"{COLOR_WAIT}TX>{COLOR_RESET} ", end="", flush=True)
                 
                 line = input().strip()
